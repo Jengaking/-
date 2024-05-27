@@ -1,7 +1,7 @@
-// ÇÉ ¹øÈ£ ±³Ã¼
+
 enum TRAFFIC_COLORS { PIN_WALK_RED = 2, PIN_WALK_GREEN = 3, PIN_CAR_GREEN, PIN_CAR_YELLOW, PIN_CAR_RED };
 
-int time_unit = 500; // ÃÊ·ÏºÒ ±ô¹ÚÀÓÀÌ ÀÚ¿¬½º·´µµ·Ï ÇÏ±â À§ÇØ ½Ã°£ ´ÜÀ§¸¦ ÀÛ°Ô ÇÔ.
+const int time_unit = 500; // ì´ˆë¡ë¶ˆ ê¹œë°•ì„ì´ ìì—°ìŠ¤ëŸ½ë„ë¡ í•˜ê¸° ìœ„í•´ ì‹œê°„ ë‹¨ìœ„ë¥¼ ì‘ê²Œ í•¨.
 int walk_units[2] = { 22500 / time_unit, 12500 / time_unit };
 int car_units[3] = { 20000 / time_unit, 1000 / time_unit, 14000 / time_unit };
 
@@ -15,10 +15,10 @@ void operate_walk_lights() {
         walk_flag ^= 1;
         walk_cnt = walk_units[walk_flag];
     }
-    // ½ÅÈ£µî ·ÎÁ÷ ¼öÁ¤
+    // ì‹ í˜¸ë“± ë¡œì§ ìˆ˜ì •
     digitalWrite(PIN_WALK_RED, walk_flag ^ 0x01);
-    if (walk_cnt <= 10 && walk_flag)  digitalWrite(PIN_WALK_GREEN, !digitalRead(PIN_WALK_GREEN)); // BLINKING µ¿ÀÛ
-    else digitalWrite(PIN_WALK_GREEN, walk_flag); // STATIC µ¿ÀÛ
+    if (walk_cnt <= 10 && walk_flag)  digitalWrite(PIN_WALK_GREEN, !digitalRead(PIN_WALK_GREEN)); // BLINKING ë™ì‘
+    else digitalWrite(PIN_WALK_GREEN, walk_flag); // STATIC ë™ì‘
     
     walk_cnt--;
 }
