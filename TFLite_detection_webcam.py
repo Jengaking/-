@@ -31,10 +31,12 @@ import threading
 import importlib.util
 from collections import deque
 
-## IPC mechanism = semaphore
-semaphore = 0
-pipe = deque()
+import serial
 
+## IPC mechanism = semaphore
+semaphore = 1
+pipe = deque()
+thread_continue = True
 ## var for boundary setting.
 click_cnt = 0
 
@@ -203,6 +205,8 @@ class DetectionController :
         time.sleep(1)
 
     def run_detection(self) :
+        global semaphore
+        global thread_continue
         #for frame1 in camera.capture_continuous(rawCapture, format="bgr",use_video_port=True):
         try:
             print('__ detection start __')
@@ -233,6 +237,7 @@ class DetectionController :
                 # Press 'q' to quit
                 if cv2.waitKey(1) == ord('q'):
                     break
+                semaphore = 0
         except Exception as e :
             print(e)
             return
@@ -240,6 +245,7 @@ class DetectionController :
             # Clean up
             cv2.destroyAllWindows()
             self.videostream.stop()
+            thread_continue = False
         return
 
     def detectWalkers(self, mother_frame) :
@@ -280,13 +286,13 @@ class DetectionController :
             if (self.crosswalk_boundary['x'] < walker_coords_on_absolute[0] and self.crosswalk_boundary['x'] + self.crosswalk_boundary['xsize'] > walker_coords_on_absolute[0]) :
                 if (self.crosswalk_boundary['y'] < walker_coords_on_absolute[1] and self.crosswalk_boundary['y'] + self.crosswalk_boundary['ysize'] / 2 > walker_coords_on_absolute[1]) :
                     # 하향 보행
-                    pipe.append(1)
-                    print(f'no.{i} walker is crossing the crosswalk in down direction.')
+                    pipe.append('1')
+                    #print(f'no.{i} walker is crossing the crosswalk in down direction.')
                     enteringCount += 1
                 elif self.crosswalk_boundary['y'] + self.crosswalk_boundary['ysize'] / 2 < walker_coords_on_absolute[1] and self.crosswalk_boundary['y'] + self.crosswalk_boundary['ysize']  > walker_coords_on_absolute[1] :
                     # 상향 보행
-                    pipe.append(2)
-                    print(f'no.{i} walker is crossing the crosswalk in up direction.')
+                    pipe.append('2')
+                    #print(f'no.{i} walker is crossing the crosswalk in up direction.')
                     enteringCount += 1
         
         return enteringCount
@@ -370,11 +376,49 @@ class DetectionController :
         self.detect_box['ysize'] = dt_coords[1][1] - dt_coords[0][1]
         
         return
+
+
+class CircuitControllerMediator :
+    def __init__ (self, ino_port='COM8', baudrate=9600, detect_machine = None) :
+        if detect_machine is None :
+            sys.exit(1)
+        self.detect_machine = detect_machine
+        self.thread_sleep_time = 0.1
+        try :
+            self.py_serial = serial.Serial(port=ino_port, baudrate=baudrate)
+        except Exception as e :
+            print('Arduino mediator', e)
+        return
+    
+    def startSingleDirectionCommunication(self) :
+        global pipe
+        global semaphore
+        global thread_continue
+        while semaphore : continue
+        
+        while thread_continue:
+            if not pipe :
+                print('mediator : empty')            
+                self.py_serial.write('0'.encode())
+            else :
+                print('mediator :', pipe[0])
+                self.py_serial.write(pipe.popleft().encode())
+            time.sleep(self.thread_sleep_time)
+            pipe.clear()
+            self.thread_sleep_time = 1 / self.detect_machine.frame_rate_calc
+            time.sleep(0.1)
+
     
 
 if __name__ == '__main__' :
     
     dc = DetectionController()
+    ino_mediator = CircuitControllerMediator(ino_port='COM5', baudrate=9600, detect_machine=dc)
+    
     objectDetectionThread = threading.Thread(target=dc.run_detection, args=())
+    communicationThread = threading.Thread(target=ino_mediator.startSingleDirectionCommunication, args=())
+    
     objectDetectionThread.start()
+    communicationThread.start()
+    
     ## arduino mediator
