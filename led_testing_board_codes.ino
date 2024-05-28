@@ -23,16 +23,18 @@ int traffic_light_before = 0; // 이전 신호등 상태
 
 
 void turnOnCrosswalk(char direction) {
+  // Serial.println("Crosswalk ON########");
   int offset = (direction == '2') ? 1 : -1;
   int pin = (offset > 0) ? 2 : 8;
   while(pin >= 2 && pin < 9) {
     digitalWrite(pin, HIGH);
     pin += offset;
-    delay(100);
+    delay(50);
   }
 }
 
 void turnOnRoad(char direction) {
+  //Serial.println("Road ON########");
   digitalWrite(9, HIGH);
 }
 
@@ -54,7 +56,6 @@ void (* LEDOperation[2])(char) = {turnOnCrosswalk, turnOnRoad};
 void loop() {
   // put your main code here, to run repeatedly:
   traffic_light_state = ((digitalRead(13) << 1) | (digitalRead(12)));
-  
   // 0 -> 1 -> 2
   if(!traffic_light_state) {
     traffic_light_before = 0;
@@ -74,11 +75,20 @@ void loop() {
 
     if(signal_margin == 0) {
       if(res != '0') {
-        LEDOperation[traffic_light_state - 1](res);
+        // Serial.println(res);
+        if(traffic_light_state == 2) {
+          turnOnRoad(res);
+        } else {
+          turnOnCrosswalk(res);
+        }
         signal_margin = signal_margins[traffic_light_state - 1];
       } else {
-        signal_margin--;
+        turnOff();
+        signal_margin = 0;
       }
+    } 
+    else {
+        signal_margin--;
     }
     traffic_light_before = traffic_light_state;
   }
